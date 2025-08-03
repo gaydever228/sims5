@@ -125,3 +125,43 @@ class Game:
         all_ideas = system.get_all_ideas()
         for ididea, idea in all_ideas.items():
             print(f'Идея {ididea} со степенью {idea.get_deg()}')
+
+    def evolve_anim(self):
+        """
+        Возвращает:
+        - snapshots: список матриц (numpy.ndarray), где каждая строка — это hedges одного агента
+        - edge_changes: список множеств изменённых рёбер (кортежи (агент, идея))
+        """
+        system = GraphManager()
+
+        # Добавляем агентов в систему
+        system.add_agents(self.agents)
+        snapshots = []
+        edge_changes = []
+
+        flag = False
+        while not flag:
+            # Сохраняем текущее состояние
+            snapshot = np.array([agent.hedges[:] for agent in self.agents])
+            snapshots.append(snapshot)
+
+            changed_edges = set()
+            temp_flag = True
+
+            for agent in self.agents:
+                original = agent.hedges[:]
+                if agent.make_best_move():
+                    temp_flag = False
+                    for i, (before, after) in enumerate(zip(original, agent.hedges)):
+                        if before != after:
+                            changed_edges.add((f"A{agent.identifier}", f"I{i}"))
+
+            edge_changes.append(changed_edges)
+            flag = temp_flag
+
+        # Добавим последний снимок после финального состояния
+        final_snapshot = np.array([agent.hedges[:] for agent in self.agents])
+        snapshots.append(final_snapshot)
+        edge_changes.append(set())
+
+        return snapshots, edge_changes

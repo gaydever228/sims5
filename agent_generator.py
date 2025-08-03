@@ -34,7 +34,7 @@ class AgentGenerator:
         agents = set()
         for i in range(self.N):
             hedges = np.random.randint(0, 2, self.M).tolist()
-            agent = Agent(hedges, i + 1, model, alpha)
+            agent = Agent(hedges, i, model, alpha, c1)
             agents.add(agent)
         return agents
 
