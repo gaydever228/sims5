@@ -50,8 +50,7 @@ def get_bipartite_pos(num_agents, num_ideas):
     B = nx.complete_bipartite_graph(num_agents, num_ideas)
 
     # Генерируем позиции для этого графа
-    pos_raw = nx.spring_layout(B, seed=42)
-
+    pos_raw = nx.spring_layout(B)
     # Преобразуем ключи в строковые имена узлов
     pos = {}
     for node, coords in pos_raw.items():
@@ -62,18 +61,25 @@ def get_bipartite_pos(num_agents, num_ideas):
 
     return pos
 
-def animate(snapshots, edge_changes, filename="animation.mp4", interval=800):
-    fig, ax = plt.subplots(figsize=(10, 8))
+def animate(snapshots, edge_changes, utilities, eq, filename="animation.mp4", interval=1000):
 
     num_agents, num_ideas = snapshots[0].shape
     agent_nodes = [f"A{i}" for i in range(num_agents)]
     idea_nodes = [f"I{j}" for j in range(num_ideas)]
     pos = get_bipartite_pos(num_agents, num_ideas)
     #pos = nx.spring_layout(nx.complete_bipartite_graph(len(agent_nodes), len(idea_nodes)), seed=42)
-    fig, ax = plt.subplots(figsize=(10, 8))
+    fig, ax = plt.subplots(figsize=(20, 20))
+
     def update(frame):
         ax.clear()
+        t = frame * (interval / 1000)  # в секундах
+        minutes = int(t // 60)
+        prev_minutes = int(((frame-1) * (interval / 1000)) // 60)
+        seconds = t % 60
+        if minutes > prev_minutes:
+            print(f"duration {minutes:02d}:{seconds:05.2f}")
         matrix = snapshots[frame]
+        agent_utils = utilities[frame]
         G = nx.Graph()
 
         for i in range(num_agents):
@@ -87,30 +93,42 @@ def animate(snapshots, edge_changes, filename="animation.mp4", interval=800):
                     G.add_edge(f"A{i}", f"I{j}")
 
         # Узлы и рёбра
-        nx.draw_networkx_nodes(G, pos, nodelist=agent_nodes, node_color="lightblue", node_size=600, ax=ax)
-        nx.draw_networkx_nodes(G, pos, nodelist=idea_nodes, node_color="lightgreen", node_size=600, ax=ax)
+        nx.draw_networkx_nodes(G, pos, nodelist=agent_nodes, node_color="lightblue", node_size=800, ax=ax)
+        nx.draw_networkx_nodes(G, pos, nodelist=idea_nodes, node_color="lightgreen", node_size=400, ax=ax)
 
         # Подписи: полезность агентов (просто сумма hedges), степень идеи
-        labels = {f"A{i}": f"A{i}\n{matrix[i].sum():.2f}" for i in range(num_agents)}
+        #labels = {f"A{i}": f"A{i}\n{matrix[i].sum():.2f}" for i in range(num_agents)}
+        labels = {f"A{i}": f"A{i}\n{agent_utils[i]:.2f}" for i in range(num_agents)}
         labels.update({f"I{j}": f"I{j}\n{matrix[:, j].sum()}" for j in range(num_ideas)})
-        nx.draw_networkx_labels(G, pos, labels, font_size=10, ax=ax)
+        nx.draw_networkx_labels(G, pos, labels, font_size=8, ax=ax)
 
         # Обычные рёбра
         nx.draw_networkx_edges(G, pos, ax=ax, edge_color="gray")
 
         # Подсветка изменённых рёбер
-        changed = edge_changes[frame]
-        if changed:
+        added = [(a, i) for (a, i, t) in edge_changes[frame] if t > 0]
+        removed = [(a, i) for (a, i, t) in edge_changes[frame] if t < 0]
+        #changed = edge_changes[frame]
+        if removed:
             nx.draw_networkx_edges(
                 G, pos,
-                edgelist=list(changed),
+                edgelist=list(removed),
                 edge_color="red",
                 width=2,
                 style="dashed",
                 ax=ax
             )
+        if added:
+            nx.draw_networkx_edges(
+                G, pos,
+                edgelist=list(added),
+                edge_color="green",
+                width=2,
+                style="dashed",
+                ax=ax
+            )
 
-        ax.set_title(f"Step {frame}", fontsize=14)
+        ax.set_title(f"Step {frame} " + eq[frame]*'Равновесие!' + (1 - eq[frame])*'не равновесие...', fontsize=14)
         ax.axis("off")
 
     ani = animation.FuncAnimation(fig, update, frames=len(snapshots), interval=interval)

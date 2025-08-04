@@ -7,7 +7,7 @@ import itertools
 class Agent:
     """Класс для объектов X"""
 
-    def __init__(self, hedges: list[int], identifier: int = 0, model='mil1', alpha=2, c1=0.2):
+    def __init__(self, hedges: list[int], identifier: int = 0, model='mil1', alpha=2, c={'mil10':0.2, 'mil00':0.05, 'mil01':1}):
         """
         Инициализация объекта первого типа
         """
@@ -22,7 +22,7 @@ class Agent:
         self._system = None
         self.model = model
         self.alpha = alpha
-        self.c1 = c1
+        self.c = c[model]
 
     def __str__(self):
         return f"Agent(id={self.identifier}, vector={self.hedges}, u={self.U}"
@@ -47,6 +47,9 @@ class Agent:
 
     def utility(self):
         """Вычисляет функцию полезности"""
+        if self._system is None:
+            raise ValueError("Агент должен быть добавлен в GraphManager")
+        N = self._system.N
         if self.model == 'mil1':
             total = 0
             for i in range(self.M):
@@ -56,16 +59,37 @@ class Agent:
                         total += deg
             self.U = total
             return total
-        elif self.model == 'mil11':
+        elif self.model == 'mil10':
             total = 0
             for i in range(self.M):
                 if self.hedges[i] == 1:
                     if i in self.ideas_dict:
                         deg = self.ideas_dict[i].get_deg()
-                        total += deg - self.c1 * deg ** self.alpha - 0.5
+                        total += deg - self.c * deg ** self.alpha - 0.5
             self.U = total
             return total
-
+        elif self.model == 'mil00':
+            total = 0
+            neighbours = set()
+            for i in range(self.M):
+                if self.hedges[i] == 1:
+                    if i in self.ideas_dict:
+                        neighbours.update(self.ideas_dict[i].agents)
+                        deg = self.ideas_dict[i].get_deg()
+                        total -=  self.c * deg ** self.alpha
+            total += len(neighbours)
+            self.U = total
+            return total
+        elif self.model == 'mil01':
+            total = 0
+            for i in range(N):
+                total += 1/self._system.dist_matrix
+            one_indices = [i for i, val in enumerate(self.hedges) if val == 1]
+            for i in one_indices:
+                if i in self.ideas_dict:
+                    total -= self.c
+            self.U = total
+            return total
         return 0
 
     def find_best_move(self) -> tuple[list[int], float] | None:
@@ -77,7 +101,7 @@ class Agent:
         """
         if self._system is None:
             raise ValueError("Агент должен быть добавлен в GraphManager")
-
+        self.utility()
         current_utility = deepcopy(self.U)
         best_move = None
         best_improvement = 0
@@ -94,6 +118,7 @@ class Agent:
 
             # Пересчитываем полезность с новым значением
             new_utility = self.utility()
+            #print(f"агент {self.identifier}, идея {i}, полезность {self.U}, {new_utility}")
             improvement = new_utility - current_utility
 
             # Проверяем, лучше ли это изменение
@@ -128,7 +153,8 @@ class Agent:
                 self.hedges[i], self.hedges[j] = 1, 0
                 self.ideas_dict[i].invert(self.identifier)
                 self.ideas_dict[j].invert(self.identifier)
-        print(best_move)
+        #print(best_move)
+        self.utility()
 
         return best_move
 
@@ -142,7 +168,7 @@ class Agent:
         best_move = self.find_best_move()
 
         if best_move is None:
-            print('нет перемен к лучшему')
+            #print('нет перемен к лучшему')
             return False
 
         positions, improvement = best_move
@@ -156,7 +182,7 @@ class Agent:
         if self._system:
             self._system._update_ideas()
             self._system.update_utilities()
-        print(f'были изменены позиции {positions}, функция полезности возрасла на {improvement}')
+        #print(f'были изменены позиции {positions}, функция полезности возрасла на {improvement}')
         return True
 
     def hamming_distance(self, other: 'Agent') -> int:
@@ -179,6 +205,7 @@ class Idea:
             all_agents: ссылка на все объекты первого типа для построения множества
         """
         self.identifier = identifier
+        self.agents = set()
         if all_agents is not None:
             self.update_agents(all_agents)
 

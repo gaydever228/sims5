@@ -7,7 +7,7 @@ from manager import GraphManager
 from agent_generator import AgentGenerator
 
 class Game:
-    def __init__(self, N: int, M: int, model='mil1', alpha=2, c1=0.2):
+    def __init__(self, N: int, M: int, model='mil1', alpha=2, c={'mil1':1, 'mil10':0.2, 'mil00':0.05, 'mil01':1}, method = 'erdos', dens = 0.5):
         """
         Инициализация игры
 
@@ -18,7 +18,10 @@ class Game:
         self.N = N
         self.M = M
         gen = AgentGenerator(N, M)
-        self.agents = gen.generate_random_agents(model=model, alpha=alpha, c1=c1)
+        if method == 'erdos':
+            self.agents = gen.generate_random_agents(model=model, alpha=alpha, c = c[model])
+        elif method == 'dens':
+            self.agents = gen.generate_uniform_density_agents(model=model, alpha=alpha, c = c[model], density=dens)
 
     # Вспомогательные функции для анализа
     def analyze_agents(self):
@@ -138,23 +141,28 @@ class Game:
         system.add_agents(self.agents)
         snapshots = []
         edge_changes = []
-
+        utilities = []
+        flagss = []
         flag = False
         while not flag:
             # Сохраняем текущее состояние
+            changed_edges = set()
             snapshot = np.array([agent.hedges[:] for agent in self.agents])
             snapshots.append(snapshot)
-
-            changed_edges = set()
+            utilities.append([agent.U for agent in self.agents])
+            flagss.append(flag)
             temp_flag = True
 
             for agent in self.agents:
                 original = agent.hedges[:]
                 if agent.make_best_move():
                     temp_flag = False
+                    #all_ideas = system.get_all_ideas()
+                    #for ididea, idea in all_ideas.items():
+                        #print(f"{idea.identifier}, степень: {idea.get_deg()}")
                     for i, (before, after) in enumerate(zip(original, agent.hedges)):
                         if before != after:
-                            changed_edges.add((f"A{agent.identifier}", f"I{i}"))
+                            changed_edges.add((f"A{agent.identifier}", f"I{i}", after - before))
 
             edge_changes.append(changed_edges)
             flag = temp_flag
@@ -162,6 +170,59 @@ class Game:
         # Добавим последний снимок после финального состояния
         final_snapshot = np.array([agent.hedges[:] for agent in self.agents])
         snapshots.append(final_snapshot)
+        utilities.append([agent.U for agent in self.agents])
         edge_changes.append(set())
+        flagss.append(flag)
+        return snapshots, edge_changes, utilities, flagss
+    def evolve_anim_by_one(self):
+        """
+        Возвращает:
+        - snapshots: список матриц (numpy.ndarray), где каждая строка — это hedges одного агента
+        - edge_changes: список множеств изменённых рёбер (кортежи (агент, идея))
+        """
+        system = GraphManager()
 
-        return snapshots, edge_changes
+        # Добавляем агентов в систему
+        system.add_agents(self.agents)
+        snapshots = []
+        edge_changes = []
+        utilities = []
+        snapshot = np.array([inner_agent.hedges[:] for inner_agent in self.agents])
+        snapshots.append(snapshot)
+        utilities.append([inner_agent.U for inner_agent in self.agents])
+        edge_changes.append(set())
+        flag = False
+        flagss = [flag]
+        raund = 0
+        while not flag and raund < 500*self.N:
+            # Сохраняем текущее состояние
+            raund += 1
+            print(f"Раунд {raund}")
+            temp_flag = True
+
+            for agent in self.agents:
+                original = agent.hedges[:]
+                changed_edges = set()
+                if agent.make_best_move():
+                    temp_flag = False
+                    #all_ideas = system.get_all_ideas()
+                    #for ididea, idea in all_ideas.items():
+                        #print(f"{idea.identifier}, степень: {idea.get_deg()}")
+                    snapshot = np.array([inner_agent.hedges[:] for inner_agent in self.agents])
+                    snapshots.append(snapshot)
+                    utilities.append([inner_agent.U for inner_agent in self.agents])
+                    flagss.append(flag)
+                    for i, (before, after) in enumerate(zip(original, agent.hedges)):
+                        if before != after:
+                            changed_edges.add((f"A{agent.identifier}", f"I{i}", after - before))
+                    edge_changes.append(changed_edges)
+            flag = temp_flag
+
+        system.adj_matrix()
+        # Добавим последний снимок после финального состояния
+        final_snapshot = np.array([agent.hedges[:] for agent in self.agents])
+        snapshots.append(final_snapshot)
+        utilities.append([agent.U for agent in self.agents])
+        edge_changes.append(set())
+        flagss.append(flag)
+        return snapshots, edge_changes, utilities, flagss

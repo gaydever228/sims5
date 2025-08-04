@@ -20,25 +20,24 @@ class AgentGenerator:
         self.N = N
         self.M = M
 
-    def generate_random_agents(self, model='mil1', alpha=2, c1=0.2):
+    def generate_random_agents(self, model='mil1', alpha=2, c={'mil1':1, 'mil10':0.2, 'mil00':0.05, 'mil01':1}):
         """
         Генерирует случайных агентов
         Args:
-            count: количество агентов
-            vector_length: длина бинарного вектора
             model: модель расчета полезности
-            alpha: параметр альфа для модели mil11
+            alpha: параметр альфа для модели mil10
+            c1: Множитель стоимости
         Returns:
             Множество агентов
         """
         agents = set()
         for i in range(self.N):
             hedges = np.random.randint(0, 2, self.M).tolist()
-            agent = Agent(hedges, i, model, alpha, c1)
+            agent = Agent(hedges, i, model, alpha, c[model])
             agents.add(agent)
         return agents
 
-    def generate_uniform_density_agents(self, density=0.5, model='mil1', alpha=2, c1=0.2):
+    def generate_uniform_density_agents(self, density=0.5, model='mil1', alpha=2, c={'mil1':1, 'mil10':0.2, 'mil00':0.05, 'mil01':1}):
         """
         Генерирует агентов с заданной плотностью единиц
         Args:
@@ -46,7 +45,8 @@ class AgentGenerator:
             vector_length: длина бинарного вектора
             density: плотность единиц (от 0 до 1)
             model: модель расчета полезности
-            alpha: параметр альфа для модели mil11
+            alpha: параметр альфа для модели mil10
+            c1: множитель стоимости
         Returns:
             Множество агентов
         """
@@ -60,11 +60,11 @@ class AgentGenerator:
             for pos in positions:
                 hedges[pos] = 1
 
-            agent = Agent(hedges, i + 1, model, alpha)
+            agent = Agent(hedges, i, model, alpha, c[model])
             agents.add(agent)
         return agents
 
-    def generate_structured_agents(self, pattern_type='clusters', model='mil1', alpha=2, c1=0.2):
+    def generate_structured_agents(self, pattern_type='clusters', model='mil1', alpha=2, c={'mil1':1, 'mil10':0.2, 'mil00':0.05, 'mil01':1}):
         """
         Генерирует агентов со структурированными паттернами
         Args:
@@ -72,7 +72,7 @@ class AgentGenerator:
             vector_length: длина бинарного вектора
             pattern_type: тип паттерна ('clusters', 'alternating', 'blocks')
             model: модель расчета полезности
-            alpha: параметр альфа для модели mil11
+            alpha: параметр альфа для модели mil10
         Returns:
             Множество агентов
         """
@@ -88,12 +88,12 @@ class AgentGenerator:
             else:
                 hedges = np.random.randint(0, 2, self.M).tolist()
 
-            agent = Agent(hedges, i + 1, model, alpha)
+            agent = Agent(hedges, i, model, alpha, c[model])
             agents.add(agent)
 
         return agents
 
-    def generate_similar_agents(self, base_agent, max_hamming_distance=1):
+    def generate_similar_agents(self, base_agent, max_hamming_distance=1, model = 'mil1', c={'mil1':1, 'mil10':0.2, 'mil00':0.05, 'mil01':1}):
         """
         Генерирует агентов, похожих на базового агента
         Args:
@@ -124,12 +124,12 @@ class AgentGenerator:
 
         for i, hedges in enumerate(selected):
             agent = Agent(hedges, base_agent.identifier + i + 100,
-                          base_agent.model, base_agent.alpha)
+                          base_agent.model, base_agent.alpha, c = c[model])
             agents.add(agent)
 
         return agents
 
-    def generate_normal_distribution_agents(self, mean_density=0.5, std=0.2, model='mil1', alpha=2, c1=0.2):
+    def generate_normal_distribution_agents(self, mean_density=0.5, std=0.2, model='mil1', alpha=2, c={'mil1':1, 'mil10':0.2, 'mil00':0.05, 'mil01':1}):
         """
         Генерирует агентов с плотностью, распределенной по нормальному закону
         Args:
@@ -138,7 +138,7 @@ class AgentGenerator:
             mean_density: средняя плотность
             std: стандартное отклонение
             model: модель расчета полезности
-            alpha: параметр альфа для модели mil11
+            alpha: параметр альфа для модели mil10
         Returns:
             Множество агентов
         """
@@ -155,12 +155,12 @@ class AgentGenerator:
                 for pos in positions:
                     hedges[pos] = 1
 
-            agent = Agent(hedges, i + 1, model, alpha)
+            agent = Agent(hedges, i, model, alpha, c1)
             agents.add(agent)
 
         return agents
 
-    def generate_beta_distribution_agents(self, alpha_param=2, beta_param=2, model='mil1', alpha=2, c1=0.2):
+    def generate_beta_distribution_agents(self, alpha_param=2, beta_param=2, model='mil1', alpha=2, c={'mil1':1, 'mil10':0.2, 'mil00':0.05, 'mil01':1}):
         """
         Генерирует агентов с плотностью, распределенной по бета-распределению
         Args:
@@ -169,7 +169,7 @@ class AgentGenerator:
             alpha_param: параметр альфа бета-распределения
             beta_param: параметр бета бета-распределения
             model: модель расчета полезности
-            alpha: параметр альфа для модели mil11
+            alpha: параметр альфа для модели mil10
         Returns:
             Множество агентов
         """
@@ -185,7 +185,7 @@ class AgentGenerator:
                 for pos in positions:
                     hedges[pos] = 1
 
-            agent = Agent(hedges, i + 1, model, alpha)
+            agent = Agent(hedges, i, model, alpha, c[model])
             agents.add(agent)
 
         return agents

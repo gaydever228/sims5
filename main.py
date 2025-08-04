@@ -7,12 +7,13 @@ from manager import GraphManager
 from agent_generator import AgentGenerator
 from game import Game
 from visual import draw_bip, animate
-
-game = Game(20, 30, model = 'mil11', c1 = 0.15)
+coefs ={'mil1':1, 'mil10':0.2, 'mil00':0.05, 'mil01':1}
+mod = 'mil00'
+game = Game(20, 6, model = mod, c = c[mod], dens = 0.1, method='erdos')
 #draw_bip(game.agents)
 
-snapshots, edge_changes = game.evolve_anim()
-animate(snapshots, edge_changes, filename="agent_evolution.mp4", interval=800)
+snapshots, edge_changes, utilities, eq = game.evolve_anim_by_one()
+#animate(snapshots, edge_changes, utilities, eq, filename="agent_evolution_mil00.mp4", interval=100)
 
 #game.print_agents_analysis()
 #game.evolve()
