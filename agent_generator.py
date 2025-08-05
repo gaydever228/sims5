@@ -33,7 +33,7 @@ class AgentGenerator:
         agents = set()
         for i in range(self.N):
             hedges = np.random.randint(0, 2, self.M).tolist()
-            agent = Agent(hedges, i, model, alpha, c[model])
+            agent = Agent(hedges, i, model, alpha, c)
             agents.add(agent)
         return agents
 
@@ -60,7 +60,7 @@ class AgentGenerator:
             for pos in positions:
                 hedges[pos] = 1
 
-            agent = Agent(hedges, i, model, alpha, c[model])
+            agent = Agent(hedges, i, model, alpha, c)
             agents.add(agent)
         return agents
 
@@ -88,7 +88,7 @@ class AgentGenerator:
             else:
                 hedges = np.random.randint(0, 2, self.M).tolist()
 
-            agent = Agent(hedges, i, model, alpha, c[model])
+            agent = Agent(hedges, i, model, alpha, c)
             agents.add(agent)
 
         return agents
@@ -124,7 +124,7 @@ class AgentGenerator:
 
         for i, hedges in enumerate(selected):
             agent = Agent(hedges, base_agent.identifier + i + 100,
-                          base_agent.model, base_agent.alpha, c = c[model])
+                          base_agent.model, base_agent.alpha, c = c)
             agents.add(agent)
 
         return agents
@@ -155,7 +155,7 @@ class AgentGenerator:
                 for pos in positions:
                     hedges[pos] = 1
 
-            agent = Agent(hedges, i, model, alpha, c1)
+            agent = Agent(hedges, i, model, alpha, c)
             agents.add(agent)
 
         return agents
@@ -185,7 +185,7 @@ class AgentGenerator:
                 for pos in positions:
                     hedges[pos] = 1
 
-            agent = Agent(hedges, i, model, alpha, c[model])
+            agent = Agent(hedges, i, model, alpha, c)
             agents.add(agent)
 
         return agents

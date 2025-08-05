@@ -30,10 +30,11 @@ class GraphManager:
         for agent in agents:
             agent._system = self
         self.agents.update(agents)
-        self._update_ideas()
-        self.update_utilities()
         self.N = len(self.agents)
+        self._update_ideas()
         self.shortest()
+        self.update_utilities()
+
     def _update_ideas(self):
         """Обновляет все идеи после изменения агентов"""
         if not self.agents:
@@ -52,13 +53,12 @@ class GraphManager:
     def update_utilities(self):
         """
         Обновляет поле U у всех агентов значениями рассчитанной полезности
-
-        Args:
-            method: метод расчета полезности
         """
+        self.shortest()
         for agent in self.agents:
             agent.U = agent.utility()
     def adj_matrix(self):
+        """Возвращает матрицу смежности агентов с весом ребра = степень идеи"""
         matrix = np.zeros((self.N, self.N))
         matrix += self.N*2
         done_agents = set()
@@ -67,7 +67,7 @@ class GraphManager:
             one_indices = [i for i, val in enumerate(agent.hedges) if val == 1]
             for i in one_indices:
                 weight = len(self.ideas[i].agents)
-                for inner_agent in self.ideas[i].agents - done_agents:
+                for inner_agent in self.ideas[i].agents.difference(done_agents):
                     if weight < matrix[agent.identifier, inner_agent.identifier] or weight < matrix[inner_agent.identifier, agent.identifier]:
                         matrix[agent.identifier, inner_agent.identifier] = weight
                         matrix[inner_agent.identifier, agent.identifier] = weight
@@ -76,14 +76,43 @@ class GraphManager:
                 if matrix[i, j] == self.N * 2:
                     matrix[i, j] = np.inf
 
-        print(matrix)
+        #print(matrix)
         #self.matrix = matrix
         return matrix
+    def individual_adj(self, agent: Agent, matrix = None):
+        """Возвращает матрицу смежности агентов с весом ребра = степень идеи"""
+        if matrix is None:
+            matrix = self.adj_matrix()
+        vector = np.zeros(self.N)
+        vector += self.N * 2
+        one_indices = [i for i, val in enumerate(agent.hedges) if val == 1]
+        for i in one_indices:
+            weight = len(self.ideas[i].agents)
+            #print(f"IDEAS {self.ideas[i].agents}")
+            for inner_agent in self.ideas[i].agents.difference({agent}):
+                if weight < vector[inner_agent.identifier]:
+                    vector[inner_agent.identifier] = weight
+        for i in range(self.N):
+            if vector[i] == self.N * 2:
+                vector[i] = np.inf
+        matrix[agent.identifier][:] = vector
+        matrix[:][agent.identifier] = vector
+        #print(vector)
+        # self.matrix = matrix
+        return matrix
     def shortest(self):
+        """находит кратчайшие пути для каждой пары агентов, записывает матрицу расстояний в self.dist_matrix"""
         adj = self.adj_matrix()
         dist_sp = shortest_path(adj, method='auto', directed=False)
         self.dist_matrix = dist_sp
         #return dist_sp
+    def individual_shortest(self, agent_id, adj = None):
+        """находит кратчайшие пути для конкретного агента, возвращает вектор?"""
+        if adj is None:
+            adj = self.adj_matrix()
+        dist_sp = shortest_path(adj, method='auto', directed=False, indices=agent_id)
+        #print(dist_sp)
+        return dist_sp
 
     def get_idea(self, identifier: int) -> 'Idea':
         """Возвращает идею по идентификатору"""

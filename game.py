@@ -19,9 +19,9 @@ class Game:
         self.M = M
         gen = AgentGenerator(N, M)
         if method == 'erdos':
-            self.agents = gen.generate_random_agents(model=model, alpha=alpha, c = c[model])
+            self.agents = gen.generate_random_agents(model=model, alpha=alpha, c = c)
         elif method == 'dens':
-            self.agents = gen.generate_uniform_density_agents(model=model, alpha=alpha, c = c[model], density=dens)
+            self.agents = gen.generate_uniform_density_agents(model=model, alpha=alpha, c = c, density=dens)
 
     # Вспомогательные функции для анализа
     def analyze_agents(self):
@@ -76,7 +76,69 @@ class Game:
         print(f"  Среднее расстояние Хэмминга: {analysis['avg_hamming_distance']:.2f}")
         print(f"  Мин/макс расстояние Хэмминга: {analysis['min_hamming_distance']}/{analysis['max_hamming_distance']}")
         print(f"  Плотность по позициям: {[f'{d:.2f}' for d in analysis['position_densities']]}")
+    def evolve_sim(self):
+        system = GraphManager()
 
+        # Добавляем агентов в систему
+        system.add_agents(self.agents)
+
+        print("\n" + "=" * 50)
+        print("Состояние агентов:")
+        for agent in list(self.agents):
+            print(f"{agent}")
+
+        print("\n" + "=" * 50)
+        print("Пошаговое изменение")
+        snapshots = []
+        edge_changes = []
+        utilities = []
+        flagss = []
+        flag = False
+        cycle_flag = False
+        raund = 1
+        while not flag and raund < 500*self.N and not cycle_flag:
+            changed_edges = set()
+            snapshot = np.array([agent.hedges[:] for agent in self.agents])
+            cycle_flag = any(np.array_equal(snapshot, s) for s in snapshots)
+            snapshots.append(snapshot)
+            utilities.append([agent.U for agent in self.agents])
+            flagss.append(flag)
+            temp_flag = True
+            print(f'раунд {raund}')
+            origin_adj = system.adj_matrix()
+            strategy_applied = {}
+            for agent in list(self.agents):
+                #print("\n" + "=" * 50)
+                #print(f"Агент {agent.identifier} думает:")
+
+                #print(f"ДО: {agent}")
+                strats = agent.simultaneous_move(origin_adj)
+                if strats is not None:
+                    temp_flag = False
+                    strategy_applied[agent] = strats
+                    #print(strategy_applied[agent])
+                    for position in strategy_applied[agent]:
+                        changed_edges.add((f"A{agent.identifier}", f"I{position}", 0.5 - agent.hedges[position]))
+            edge_changes.append(changed_edges)
+            for agent, positions in strategy_applied.items():
+                agent.sys_upd(positions)
+            flag = temp_flag
+            #system._update_ideas()
+            system.update_utilities()
+            raund += 1
+
+        print("\n" + "=" * 50)
+        if flag:
+            print("Типа равновесие:")
+        elif cycle_flag:
+            print("Цикл")
+        # Добавим последний снимок после финального состояния
+        final_snapshot = np.array([agent.hedges[:] for agent in self.agents])
+        snapshots.append(final_snapshot)
+        utilities.append([agent.U for agent in self.agents])
+        edge_changes.append(set())
+        flagss.append(flag)
+        return snapshots, edge_changes, utilities, flagss
     def evolve(self):
         system = GraphManager()
 
